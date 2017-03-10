@@ -28,6 +28,8 @@ static struct list ready_list;
    when they are first scheduled and removed when they exit. */
 static struct list all_list;
 
+/*List of all processes currently sleeping*/
+static struct list sleep_list;
 /* Idle thread. */
 static struct thread *idle_thread;
 
@@ -92,6 +94,7 @@ thread_init (void)
   lock_init (&tid_lock);
   list_init (&ready_list);
   list_init (&all_list);
+  list_init (&sleep_list);
 
   /* Set up a thread structure for the running thread. */
   initial_thread = running_thread ();
@@ -339,6 +342,32 @@ thread_foreach (thread_action_func *func, void *aux)
     }
 }
 
+/* Runs through all the threads in sleep_list, decrements the threads ticks and wakes any
+that reduce to zero*/
+void
+thread_check_sleeping(){
+   struct list_elem *e;
+   ASSERT(intr_get_level()==INTR_OFF);
+   for(e = list_begin(&sleep_list); e!= list_end(&sleep_list); e = list_next(e)) {
+      struct thread *t = list_entry(e,
+      struct thread, sleepelem);
+      //printf("CHECKED SLEEPING");
+       t->ticks--;
+      if (t->ticks <= 0) {
+         list_remove(&t->sleepelem);
+         thread_unblock(t);
+      } 
+   }
+}
+/*Adds a thread to sleep_list*/
+void
+thread_add_sleeping(struct thread *t) {
+  int64_t ticks = t->ticks;
+  struct list_elem *e;
+  ASSERT(intr_get_level() == INTR_OFF);
+
+    list_push_back(&sleep_list, &t->sleepelem);
+}
 /* Sets the current thread's priority to NEW_PRIORITY. */
 void
 thread_set_priority (int new_priority) 
