@@ -82,16 +82,17 @@ typedef int tid_t;
    blocked state is on a semaphore wait list. */
 struct thread
   {
-    /*Keep track of how long the thread has slept. Used by the alarm clock*/
-    int64_t ticks;
     /* Owned by thread.c. */
+    int ticks_to_sleep;			/* Number of ticks to sleep this thread*/
     tid_t tid;                          /* Thread identifier. */
     enum thread_status status;          /* Thread state. */
     char name[16];                      /* Name (for debugging purposes). */
     uint8_t *stack;                     /* Saved stack pointer. */
     int priority;                       /* Priority. */
-    struct list_elem sleepelem;
     struct list_elem allelem;           /* List element for all threads list. */
+    bool is_donated;		  	            /* Is the priority donated? */
+    int old_pri;			                  /* The previous priority */
+
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
 
@@ -103,7 +104,6 @@ struct thread
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
   };
-
 
 /* If false (default), use round-robin scheduler.
    If true, use multi-level feedback queue scheduler.
@@ -132,14 +132,13 @@ void thread_yield (void);
 /* Performs some operation on thread t, given auxiliary data AUX. */
 typedef void thread_action_func (struct thread *t, void *aux);
 void thread_foreach (thread_action_func *, void *);
-void thread_check_sleeping(void);
-void thread_add_sleeping(struct thread *);
+
 int thread_get_priority (void);
-void thread_set_priority (int);
+int thread_set_priority (int);
+void check_thread_pri(struct thread *t, void *aux);
 
 int thread_get_nice (void);
 void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
-
 #endif /* threads/thread.h */
